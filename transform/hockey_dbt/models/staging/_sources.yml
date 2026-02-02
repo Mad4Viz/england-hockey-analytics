@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: hockey_raw
+    description: Raw data scraped from England Hockey website
+    database: england-hockey-analytics
+    schema: hockey_raw
+    tables:
+      - name: standings
+        description: League standings by season, competition, and phase
+      - name: matches
+        description: Match fixtures and results
+      - name: match_events
+        description: In-match events (goals, cards, etc.)

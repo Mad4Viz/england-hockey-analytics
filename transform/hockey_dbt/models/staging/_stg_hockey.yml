@@ -1,0 +1,137 @@
+version: 2
+
+models:
+  - name: stg_standings
+    description: >
+      Cleaned league standings data from England Hockey.
+      One row per team per competition per phase per season.
+    columns:
+      - name: standing_id
+        description: Surrogate key uniquely identifying each standings record
+        tests:
+          - unique
+          - not_null
+      - name: season
+        description: Competition season (e.g., '2023-24')
+        tests:
+          - not_null
+      - name: team
+        description: Team name
+        tests:
+          - not_null
+      - name: phase
+        description: Competition phase (e.g., 'Regular Season', 'Playoffs')
+      - name: competition_group
+        description: Competition grouping or tier
+      - name: competition
+        description: Full competition name
+      - name: played
+        description: Number of matches played
+      - name: wins
+        description: Number of matches won
+      - name: draws
+        description: Number of matches drawn
+      - name: losses
+        description: Number of matches lost
+      - name: goals_for
+        description: Total goals scored
+      - name: goals_against
+        description: Total goals conceded
+      - name: goal_difference
+        description: Goals scored minus goals conceded
+      - name: points
+        description: Total league points
+      - name: scraped_at
+        description: Timestamp when data was extracted from source
+
+  - name: stg_matches
+    description: >
+      Cleaned match fixtures and results from England Hockey.
+      One row per match.
+    columns:
+      - name: match_id
+        description: Surrogate key uniquely identifying each match
+        tests:
+          - unique
+          - not_null
+      - name: season
+        description: Competition season (e.g., '2023-24')
+        tests:
+          - not_null
+      - name: match_date
+        description: Date the match was played or scheduled
+        tests:
+          - not_null
+      - name: home_team
+        description: Home team name
+        tests:
+          - not_null
+      - name: away_team
+        description: Away team name
+        tests:
+          - not_null
+      - name: venue
+        description: Match venue or location
+        tests:
+          - not_null:
+              severity: warn
+      - name: phase
+        description: Competition phase (e.g., 'Regular Season', 'Playoffs')
+      - name: competition_group
+        description: Competition grouping or tier
+      - name: competition
+        description: Full competition name
+      - name: match_time
+        description: Scheduled kick-off time
+      - name: home_score
+        description: Goals scored by home team (null if match not yet played)
+      - name: away_score
+        description: Goals scored by away team (null if match not yet played)
+      - name: match_url
+        description: Source URL for match details on England Hockey website
+      - name: scraped_at
+        description: Timestamp when data was extracted from source
+
+  - name: stg_match_events
+    description: >
+      Cleaned in-match events (goals, cards) from England Hockey.
+      One row per event.
+    columns:
+      - name: event_id
+        description: Surrogate key uniquely identifying each event
+        tests:
+          - unique
+          - not_null
+      - name: event_type
+        description: Type of event (e.g., 'goal', 'card')
+        tests:
+          - not_null
+      - name: match_url
+        description: Reference to parent match in stg_matches
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_matches')
+              field: match_url
+      - name: event_subtype
+        description: Subtype of event (e.g., 'field goal', 'penalty corner')
+      - name: team
+        description: Team associated with the event
+      - name: player_name
+        description: Player who caused or received the event
+      - name: minute
+        description: Minute of match when event occurred
+      - name: season
+        description: Competition season (e.g., '2023-24')
+      - name: match_date
+        description: Date of the match
+      - name: home_team
+        description: Home team name
+      - name: away_team
+        description: Away team name
+      - name: home_logo
+        description: URL to home team logo image (for Tableau rendering)
+      - name: away_logo
+        description: URL to away team logo image (for Tableau rendering)
+      - name: scraped_at
+        description: Timestamp when data was extracted from source

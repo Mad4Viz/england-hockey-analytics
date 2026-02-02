@@ -1,0 +1,87 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+ENV/
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# dbt
+transform/hockey_dbt/target/
+transform/hockey_dbt/dbt_packages/
+transform/hockey_dbt/logs/
+transform/hockey_dbt/dbt_internal_packages/
+
+# BigQuery / GCP credentials
+service_account*.json
+credentials*.json
+*-credentials.json
+gcp-key*.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Data files (scraped/processed)
+data/raw/
+data/processed/
+*.csv
+*.parquet
+!data/sample/*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Testing
+testing/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+logs/
+
+# Working/planning docs
+PROJECT_PLAN.md
+PROJECT_PLAN_DETAILED.md
+CONTINUATION_NOTES.md
+docs/research/
+docs/BUSINESS_SCENARIO.md
+extract/PHASE3_PLAN.md
+extract/notes/
+
+# Placeholder/empty modules
+load/
+
+# dbt boilerplate
+transform/hockey_dbt/models/example/
+transform/hockey_dbt/README.md
+
+# Debug and test data
+data/sample/Test/
+data/sample/debug*.html
+data/sample/filter_options.json
+data/sample/scrape_progress_summary.csv
+data/scrape_state.json

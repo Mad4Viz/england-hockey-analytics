@@ -1,0 +1,46 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+env:
+  DBT_PROFILES_DIR: ./transform/hockey_dbt
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-bigquery
+
+      - name: Set up GCP credentials
+        run: |
+          echo '${{ secrets.GCP_CREDENTIALS }}' > /tmp/gcp-key.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json" >> $GITHUB_ENV
+
+      - name: dbt deps
+        working-directory: transform/hockey_dbt
+        run: dbt deps
+
+      - name: dbt build (production)
+        working-directory: transform/hockey_dbt
+        run: dbt build --target prod
+
+      - name: dbt test (production)
+        working-directory: transform/hockey_dbt
+        run: dbt test --target prod
+
+      - name: dbt docs generate
+        working-directory: transform/hockey_dbt
+        run: dbt docs generate

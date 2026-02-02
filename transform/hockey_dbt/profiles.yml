@@ -1,0 +1,29 @@
+hockey_dbt:
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: england-hockey-analytics
+      dataset: hockey_dev
+      location: europe-west2
+      threads: 4
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      priority: interactive
+      # Uses GOOGLE_APPLICATION_CREDENTIALS environment variable
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+
+    prod:
+      type: bigquery
+      method: service-account
+      project: england-hockey-analytics
+      dataset: hockey_prod
+      location: europe-west2
+      threads: 4
+      job_execution_timeout_seconds: 300
+      job_retries: 1
+      priority: interactive
+      # Uses GOOGLE_APPLICATION_CREDENTIALS environment variable
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+
+  target: dev

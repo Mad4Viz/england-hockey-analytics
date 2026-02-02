@@ -1,0 +1,316 @@
+version: 2
+
+models:
+  - name: dim_seasons
+    description: >
+      Season dimension table containing descriptive attributes for each hockey season.
+      One row per season. Dates are derived from actual match data.
+    columns:
+      - name: season_id
+        description: "PK: Surrogate key for season (numeric, chronologically ordered)"
+        tests:
+          - unique
+          - not_null
+      - name: season_name
+        description: Season name as displayed (e.g., '2023-24')
+        tests:
+          - unique
+          - not_null
+      - name: start_date
+        description: First match date in this season
+        tests:
+          - not_null
+      - name: end_date
+        description: Last match date in this season
+        tests:
+          - not_null
+
+  - name: dim_phases
+    description: >
+      Phase dimension table for competition phases.
+      Current scope: Premier League Phase 1 & 2 only.
+      Other phases (Top Six, Lower Six, Pools, Finals) to be added later.
+    columns:
+      - name: phase_id
+        description: "PK: Surrogate key for phase"
+        tests:
+          - unique
+          - not_null
+      - name: phase_name
+        description: Phase name as displayed (e.g., 'Phase 1', 'Phase 2')
+        tests:
+          - unique
+          - not_null
+      - name: phase_order
+        description: Sort order (1=Phase 1, 2=Phase 2, 99=other/future phases)
+        tests:
+          - not_null
+
+  - name: dim_teams
+    description: >
+      Team dimension table. One row per unique team name across all seasons/divisions.
+      Division is NOT stored here (teams can be promoted/relegated) - get it from match context.
+    columns:
+      - name: team_id
+        description: "PK: Surrogate key for team"
+        tests:
+          - unique
+          - not_null
+      - name: team_name
+        description: Team name as displayed (e.g., 'Surbiton W1', 'Hampstead & Westminster')
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_players
+    description: >
+      Player dimension table. One row per unique player name.
+      Players are derived from match events (goals, cards) - only players with recorded events appear here.
+    columns:
+      - name: player_id
+        description: "PK: Surrogate key for player"
+        tests:
+          - unique
+          - not_null
+      - name: player_name
+        description: Player name as displayed
+        tests:
+          - unique
+          - not_null
+
+  # ===========================================================================
+  # FACTS
+  # ===========================================================================
+
+  - name: fct_matches
+    description: >
+      Match fact table (anchor fact). One row per match.
+      Contains scores, venue, and match status. Other facts reference this via match_id.
+    columns:
+      - name: match_id
+        description: "PK: Surrogate key for match"
+        tests:
+          - unique
+          - not_null
+      - name: season_id
+        description: "FK: References dim_seasons"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_seasons')
+              field: season_id
+      - name: phase_id
+        description: "FK: References dim_phases (NULL if phase not recorded)"
+        tests:
+          - not_null:
+              severity: warn  # 40 rows have NULL phase in source data
+          - relationships:
+              to: ref('dim_phases')
+              field: phase_id
+      - name: home_team_id
+        description: "FK: References dim_teams (home team)"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_teams')
+              field: team_id
+      - name: away_team_id
+        description: "FK: References dim_teams (away team)"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_teams')
+              field: team_id
+      - name: match_date
+        description: Date of the match
+        tests:
+          - not_null
+      - name: match_time
+        description: Scheduled kick-off time
+      - name: home_score
+        description: Goals scored by home team (null if not yet played)
+      - name: away_score
+        description: Goals scored by away team (null if not yet played)
+      - name: venue
+        description: Match venue
+      - name: match_status
+        description: "Completed, Upcoming, or Missing result"
+        tests:
+          - not_null
+
+  - name: fct_team_matches
+    description: >
+      Team-perspective fact table (child fact). Two rows per match - one for each team.
+      Enables "team journey" analysis with team/opponent context.
+
+      TODO: 80 rows have NULL phase_id - need to define phase logic better.
+      Phase data may be missing from source or phase assignment logic needs review.
+    columns:
+      - name: team_match_id
+        description: "PK: Surrogate key for team-match combination"
+        tests:
+          - unique
+          - not_null
+      - name: match_id
+        description: "FK: References fct_matches"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('fct_matches')
+              field: match_id
+      - name: season_id
+        description: "FK: References dim_seasons"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_seasons')
+              field: season_id
+      - name: phase_id
+        description: "FK: References dim_phases (NULL if phase not recorded)"
+        tests:
+          - not_null:
+              severity: warn  # 80 rows have NULL phase in source data
+          - relationships:
+              to: ref('dim_phases')
+              field: phase_id
+      - name: team_id
+        description: "FK: References dim_teams (the team this row represents)"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_teams')
+              field: team_id
+      - name: opponent_id
+        description: "FK: References dim_teams (the opposing team)"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_teams')
+              field: team_id
+      - name: is_home
+        description: Whether this team was playing at home
+        tests:
+          - not_null
+      - name: match_date
+        description: Date of the match
+        tests:
+          - not_null
+      - name: venue
+        description: Match venue
+      - name: home_score
+        description: Goals scored by home team (null if not yet played)
+      - name: away_score
+        description: Goals scored by away team (null if not yet played)
+
+  - name: fct_match_events
+    description: >
+      Match events fact table (child fact). One row per event (goal or card).
+      Links to matches, players, and teams.
+    columns:
+      - name: event_id
+        description: "PK: Surrogate key for event"
+        tests:
+          - unique
+          - not_null
+      - name: match_id
+        description: "FK: References fct_matches"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('fct_matches')
+              field: match_id
+      - name: player_id
+        description: "FK: References dim_players"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_players')
+              field: player_id
+      - name: team_id
+        description: "FK: References dim_teams"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_teams')
+              field: team_id
+      - name: event_type
+        description: "Type of event: goal or card"
+        tests:
+          - not_null
+      - name: event_subtype
+        description: "Subtype: FG/PC for goals, Green/Yellow/Red for cards"
+      - name: minute
+        description: Minute of the match when event occurred
+
+  - name: fct_standings
+    description: >
+      Standings fact table (child fact). League table positions and statistics.
+      One row per team per season per phase. Aggregated data from source website.
+    columns:
+      - name: standings_id
+        description: "PK: Surrogate key for standings row"
+        tests:
+          - unique
+          - not_null
+      - name: season_id
+        description: "FK: References dim_seasons"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_seasons')
+              field: season_id
+      - name: phase_id
+        description: "FK: References dim_phases (NULL if phase not recorded)"
+        tests:
+          - not_null:
+              severity: warn  # 80 rows have NULL phase in source data
+          - relationships:
+              to: ref('dim_phases')
+              field: phase_id
+      - name: team_id
+        description: "FK: References dim_teams"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_teams')
+              field: team_id
+      - name: position
+        description: Team's position in the league table
+        tests:
+          - not_null
+      - name: played
+        description: Number of matches played
+        tests:
+          - not_null
+      - name: won
+        description: Number of matches won
+        tests:
+          - not_null
+      - name: drawn
+        description: Number of matches drawn
+        tests:
+          - not_null
+      - name: lost
+        description: Number of matches lost
+        tests:
+          - not_null
+      - name: goals_for
+        description: Total goals scored
+        tests:
+          - not_null
+      - name: goals_against
+        description: Total goals conceded
+        tests:
+          - not_null
+      - name: goal_difference
+        description: Goals for minus goals against
+        tests:
+          - not_null
+      - name: points
+        description: Total league points
+        tests:
+          - not_null
+      - name: snapshot_date
+        description: Date when standings were scraped
+        tests:
+          - not_null

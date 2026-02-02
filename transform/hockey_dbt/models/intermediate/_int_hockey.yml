@@ -1,0 +1,96 @@
+version: 2
+
+models:
+  - name: int_matches
+    description: >
+      Match data enriched with business logic.
+      Adds match_status to indicate whether a match is completed, upcoming, or missing results.
+    columns:
+      - name: match_id
+        description: Surrogate key from staging (unique per match)
+      - name: season
+        description: Competition season (e.g., '2025-2026')
+      - name: phase
+        description: Competition phase (e.g., 'Phase 1', 'Top Six')
+      - name: competition_group
+        description: Competition grouping (e.g., 'EH Adult EHL Womens')
+      - name: competition
+        description: Full competition name (e.g., 'Womens Premier Division')
+      - name: home_team
+        description: Home team name
+      - name: away_team
+        description: Away team name
+      - name: venue
+        description: Match venue or location
+      - name: match_date
+        description: Date the match was played or scheduled
+      - name: match_time
+        description: Scheduled kick-off time
+      - name: home_score
+        description: Goals scored by home team (null if not yet played)
+      - name: away_score
+        description: Goals scored by away team (null if not yet played)
+      - name: match_url
+        description: Source URL for match details
+      - name: scraped_at
+        description: Timestamp when data was extracted from source
+      - name: match_status
+        description: >
+          Business logic field indicating match state:
+          Completed (has scores), Upcoming (future match), Missing result (past date, no scores)
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Completed', 'Upcoming', 'Missing result']
+
+  - name: int_team_matches
+    description: >
+      Team-centric view of matches. Each match becomes two rows — one from each team's perspective (Home and Away).
+      Enables questions like "What's our home form this season?" (filter by team + is_home)
+      or "Is Surbiton stronger home or away?" (group by is_home where team = Surbiton).
+    columns:
+      - name: team_match_id
+        description: Surrogate key for team + match combination
+        tests:
+          - unique
+          - not_null
+      - name: match_id
+        description: Reference to the parent match
+      - name: team
+        description: The team this row represents
+        tests:
+          - not_null
+      - name: opponent
+        description: The team they played or will play against
+        tests:
+          - not_null
+      - name: is_home
+        description: True if this team was the home team
+        tests:
+          - not_null
+      - name: home_away
+        description: Readable label - 'Home' or 'Away'
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Home', 'Away']
+      - name: season
+        description: Competition season
+      - name: phase
+        description: Competition phase
+      - name: competition_group
+        description: Competition grouping
+      - name: competition
+        description: Full competition name
+      - name: match_date
+        description: Date of the match
+      - name: match_time
+        description: Scheduled kick-off time
+      - name: venue
+        description: Match venue
+      - name: match_url
+        description: Source URL for match details
+      - name: scraped_at
+        description: Timestamp when data was extracted
+      - name: match_status
+        description: Whether match is Completed, Upcoming, or Missing result

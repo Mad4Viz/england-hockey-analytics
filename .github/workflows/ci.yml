@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  DBT_PROFILES_DIR: ./transform/hockey_dbt
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install dbt-bigquery sqlfluff sqlfluff-templater-dbt
+
+      - name: SQLFluff lint
+        run: |
+          sqlfluff lint transform/hockey_dbt/models/
+
+      - name: Set up GCP credentials
+        run: |
+          echo '${{ secrets.GCP_CREDENTIALS }}' > /tmp/gcp-key.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json" >> $GITHUB_ENV
+
+      - name: dbt deps
+        working-directory: transform/hockey_dbt
+        run: dbt deps
+
+      - name: dbt compile
+        working-directory: transform/hockey_dbt
+        run: dbt compile
+
+      - name: dbt test
+        working-directory: transform/hockey_dbt
+        run: dbt test
