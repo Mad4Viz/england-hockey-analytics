@@ -108,16 +108,14 @@ models:
               to: ref('dim_phases')
               field: phase_id
       - name: home_team_id
-        description: "FK: References dim_teams (home team)"
+        description: "FK: References dim_teams (home team). NULL for TBC placeholder teams."
         tests:
-          - not_null
           - relationships:
               to: ref('dim_teams')
               field: team_id
       - name: away_team_id
-        description: "FK: References dim_teams (away team)"
+        description: "FK: References dim_teams (away team). NULL for TBC placeholder teams."
         tests:
-          - not_null
           - relationships:
               to: ref('dim_teams')
               field: team_id
@@ -174,16 +172,14 @@ models:
               to: ref('dim_phases')
               field: phase_id
       - name: team_id
-        description: "FK: References dim_teams (the team this row represents)"
+        description: "FK: References dim_teams (the team this row represents). NULL for TBC placeholder teams."
         tests:
-          - not_null
           - relationships:
               to: ref('dim_teams')
               field: team_id
       - name: opponent_id
-        description: "FK: References dim_teams (the opposing team)"
+        description: "FK: References dim_teams (the opposing team). NULL for TBC placeholder teams."
         tests:
-          - not_null
           - relationships:
               to: ref('dim_teams')
               field: team_id

@@ -34,6 +34,7 @@ gcp-key*.json
 # Data files (scraped/processed)
 data/raw/
 data/processed/
+data/production/
 *.csv
 *.parquet
 !data/sample/*.csv
@@ -73,7 +74,7 @@ extract/PHASE3_PLAN.md
 extract/notes/
 
 # Placeholder/empty modules
-load/
+# load/ - now tracked (contains documentation)
 
 # dbt boilerplate
 transform/hockey_dbt/models/example/

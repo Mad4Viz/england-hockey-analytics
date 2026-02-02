@@ -7,7 +7,8 @@ WITH source AS (
 staged AS (
     SELECT
         -- surrogate key (unique identifier for each match)
-        {{ dbt_utils.generate_surrogate_key(['season', 'match_date', 'home_team', 'away_team']) }} AS match_id,
+        -- includes competition to differentiate men's vs women's matches on same date
+        {{ dbt_utils.generate_surrogate_key(['season', 'competition', 'match_date', 'home_team', 'away_team']) }} AS match_id,
 
         -- dimensions (text fields that describe the data)
         CAST(season AS string) AS season,

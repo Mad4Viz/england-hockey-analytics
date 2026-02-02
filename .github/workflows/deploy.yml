@@ -22,7 +22,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install dbt-bigquery
+          pip install dbt-bigquery sqlfluff sqlfluff-templater-dbt
+
+      - name: SQLFluff lint
+        run: |
+          sqlfluff lint transform/hockey_dbt/models/
 
       - name: Set up GCP credentials
         run: |

@@ -16,6 +16,12 @@ Full documentation coming soon.
 Scraper (Python/Selenium) → Local CSV → BigQuery → dbt → Tableau
 ```
 
+| Stage | Folder | Description |
+|-------|--------|-------------|
+| Extract | `extract/` | Selenium scraper for England Hockey website |
+| Load | `load/` | BigQuery upload (see [load/README.md](load/README.md)) |
+| Transform | `transform/hockey_dbt/` | dbt Core models (staging → marts) |
+
 ### Sandbox Limitations
 
 This project uses **BigQuery sandbox mode** (free tier, no billing required). Limitations:
@@ -31,6 +37,20 @@ The GCS step provides:
 - Free data loading to BigQuery (vs paid streaming inserts)
 - Raw file backup/audit trail
 - Decoupled extract and load stages
+
+---
+
+## Data Quality
+
+Known data quality issues from the England Hockey source website:
+
+| Issue | Count | Cause |
+|-------|-------|-------|
+| Missing venue | 212 | Matches without venue recorded in source |
+| Missing phase | 4,335 | Matches without phase (Phase 1/2) assigned |
+| TBC teams | 8 | Placeholder teams for undetermined playoff matches |
+
+These are source data limitations, not pipeline bugs. The dbt pipeline handles them gracefully with warnings.
 
 ---
 
