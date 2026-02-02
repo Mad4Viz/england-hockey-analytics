@@ -29,12 +29,12 @@ jobs:
           echo '${{ secrets.GCP_CREDENTIALS }}' > /tmp/gcp-key.json
           echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json" >> $GITHUB_ENV
 
-      - name: SQLFluff lint
-        run: sqlfluff lint transform/hockey_dbt/models/
-
       - name: dbt deps
         working-directory: transform/hockey_dbt
         run: dbt deps
+
+      - name: SQLFluff lint
+        run: sqlfluff lint transform/hockey_dbt/models/
 
       - name: dbt build (production)
         working-directory: transform/hockey_dbt
