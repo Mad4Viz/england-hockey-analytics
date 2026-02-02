@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 env:
-  DBT_PROFILES_DIR: ./transform/hockey_dbt
+  DBT_PROFILES_DIR: ${{ github.workspace }}/transform/hockey_dbt
 
 jobs:
   deploy:
