@@ -24,14 +24,13 @@ jobs:
         run: |
           pip install dbt-bigquery sqlfluff sqlfluff-templater-dbt
 
-      - name: SQLFluff lint
-        run: |
-          sqlfluff lint transform/hockey_dbt/models/
-
       - name: Set up GCP credentials
         run: |
           echo '${{ secrets.GCP_CREDENTIALS }}' > /tmp/gcp-key.json
           echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json" >> $GITHUB_ENV
+
+      - name: SQLFluff lint
+        run: sqlfluff lint transform/hockey_dbt/models/
 
       - name: dbt deps
         working-directory: transform/hockey_dbt

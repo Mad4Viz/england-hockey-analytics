@@ -14,7 +14,7 @@ exclude_rules = LT05
 [sqlfluff:templater:dbt]
 # Point to dbt project
 project_dir = transform/hockey_dbt
-profiles_dir = ~/.dbt
+profiles_dir = transform/hockey_dbt
 
 [sqlfluff:indentation]
 # 4-space indentation
