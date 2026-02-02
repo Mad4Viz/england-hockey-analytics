@@ -85,3 +85,9 @@ data/sample/debug*.html
 data/sample/filter_options.json
 data/sample/scrape_progress_summary.csv
 data/scrape_state.json
+
+#DBT Bolier Plates
+transform/hockey_dbt/analyses/
+transform/hockey_dbt/snapshots/
+transform/hockey_dbt/seeds/
+transform/hockey_dbt/macros/
