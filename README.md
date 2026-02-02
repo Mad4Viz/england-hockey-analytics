@@ -42,15 +42,16 @@ The GCS step provides:
 
 ## Data Quality
 
-Known data quality issues from the England Hockey source website:
+Known data quality notes:
 
 | Issue | Count | Cause |
 |-------|-------|-------|
 | Missing venue | 212 | Matches without venue recorded in source |
-| Missing phase | 4,335 | Matches without phase (Phase 1/2) assigned |
 | TBC teams | 8 | Placeholder teams for undetermined playoff matches |
 
 These are source data limitations, not pipeline bugs. The dbt pipeline handles them gracefully with warnings.
+
+**Note:** Phase data (Phase 1/2) only applies to Premier League competitions. Other competitions don't use this structure, so null phase values are expected.
 
 ---
 
