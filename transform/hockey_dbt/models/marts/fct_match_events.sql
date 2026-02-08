@@ -17,11 +17,13 @@ WITH events AS (
     SELECT * FROM {{ ref('stg_match_events') }}
 ),
 
--- Get match_id from stg_matches (join on match_url)
+-- Get match_id and competition context from stg_matches (join on match_url)
 matches AS (
     SELECT
         match_id,
-        match_url
+        match_url,
+        competition_group,
+        competition
     FROM {{ ref('stg_matches') }}
 ),
 
@@ -44,6 +46,10 @@ final AS (
         m.match_id,  -- FK to fct_matches
         p.player_id,
         t.team_id,
+
+        -- Competition context (denormalised for filtering, via match join)
+        m.competition_group,
+        m.competition AS competition_name,
 
         -- Attributes
         e.event_type,

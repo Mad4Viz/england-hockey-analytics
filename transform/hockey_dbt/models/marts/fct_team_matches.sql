@@ -65,6 +65,10 @@ final AS (
         t.team_id,
         opp.team_id AS opponent_id,
 
+        -- Competition context (denormalised for filtering)
+        tm.competition_group,
+        tm.competition AS competition_name,
+
         -- Attributes
         tm.is_home,
         tm.match_date,

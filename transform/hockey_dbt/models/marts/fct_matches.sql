@@ -55,6 +55,10 @@ final AS (
         m.home_score,
         m.away_score,
 
+        -- Competition context (denormalised for filtering)
+        m.competition_group,
+        m.competition AS competition_name,
+
         -- Descriptive attributes
         m.venue,
         m.match_status  -- Business logic added in intermediate layer

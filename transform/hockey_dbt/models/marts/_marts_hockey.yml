@@ -103,7 +103,7 @@ models:
         description: "FK: References dim_phases (NULL if phase not recorded)"
         tests:
           - not_null:
-              severity: warn  # 40 rows have NULL phase in source data
+              severity: warn
           - relationships:
               to: ref('dim_phases')
               field: phase_id
@@ -119,6 +119,14 @@ models:
           - relationships:
               to: ref('dim_teams')
               field: team_id
+      - name: competition_group
+        description: "Competition grouping (e.g., 'EH Adult EHL Womens', 'EH Adult EHL Mens')"
+        tests:
+          - not_null
+      - name: competition_name
+        description: "Specific competition (e.g., 'Womens Premier Division', 'Mens Division 1 North')"
+        tests:
+          - not_null
       - name: match_date
         description: Date of the match
         tests:
@@ -140,9 +148,6 @@ models:
     description: >
       Team-perspective fact table (child fact). Two rows per match - one for each team.
       Enables "team journey" analysis with team/opponent context.
-
-      TODO: 80 rows have NULL phase_id - need to define phase logic better.
-      Phase data may be missing from source or phase assignment logic needs review.
     columns:
       - name: team_match_id
         description: "PK: Surrogate key for team-match combination"
@@ -167,7 +172,7 @@ models:
         description: "FK: References dim_phases (NULL if phase not recorded)"
         tests:
           - not_null:
-              severity: warn  # 80 rows have NULL phase in source data
+              severity: warn
           - relationships:
               to: ref('dim_phases')
               field: phase_id
@@ -183,6 +188,14 @@ models:
           - relationships:
               to: ref('dim_teams')
               field: team_id
+      - name: competition_group
+        description: "Competition grouping (e.g., 'EH Adult EHL Womens', 'EH Adult EHL Mens')"
+        tests:
+          - not_null
+      - name: competition_name
+        description: "Specific competition (e.g., 'Womens Premier Division', 'Mens Division 1 North')"
+        tests:
+          - not_null
       - name: is_home
         description: Whether this team was playing at home
         tests:
@@ -229,6 +242,14 @@ models:
           - relationships:
               to: ref('dim_teams')
               field: team_id
+      - name: competition_group
+        description: "Competition grouping (e.g., 'EH Adult EHL Womens', 'EH Adult EHL Mens')"
+        tests:
+          - not_null
+      - name: competition_name
+        description: "Specific competition (e.g., 'Womens Premier Division', 'Mens Division 1 North')"
+        tests:
+          - not_null
       - name: event_type
         description: "Type of event: goal or card"
         tests:
@@ -259,7 +280,7 @@ models:
         description: "FK: References dim_phases (NULL if phase not recorded)"
         tests:
           - not_null:
-              severity: warn  # 80 rows have NULL phase in source data
+              severity: warn
           - relationships:
               to: ref('dim_phases')
               field: phase_id
@@ -270,6 +291,14 @@ models:
           - relationships:
               to: ref('dim_teams')
               field: team_id
+      - name: competition_group
+        description: "Competition grouping (e.g., 'EH Adult EHL Womens', 'EH Adult EHL Mens')"
+        tests:
+          - not_null
+      - name: competition_name
+        description: "Specific competition (e.g., 'Womens Premier Division', 'Mens Division 1 North')"
+        tests:
+          - not_null
       - name: position
         description: Team's position in the league table
         tests:

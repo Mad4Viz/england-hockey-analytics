@@ -44,6 +44,10 @@ final AS (
         p.phase_id,
         t.team_id,
 
+        -- Competition context (denormalised for filtering)
+        st.competition_group,
+        st.competition AS competition_name,
+
         -- Measures
         st.position,
         st.played,
