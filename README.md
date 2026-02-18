@@ -1,19 +1,17 @@
-# England Hockey Analytics
+# England Hockey Recruitment Screening
 
 Goal scorer data on England Hockey is buried inside individual match pages. You can't see who's scoring across a whole season, how they're scoring, or how that compares across divisions.
 
-Built for club analysts screening goal scorers for recruitment shortlists.
+This project is built for club analysts screening goal scorers for recruitment shortlists.
 
 <p>
 <img src="screenshots/source_fixtures.png" alt="England Hockey fixtures page" width="370">
 <img src="screenshots/source_match.png" alt="England Hockey match page" width="370">
 </p>
 
----
+## How It Works
 
 <img src="screenshots/architecture.png" alt="Project Architecture" width="750">
-
-## How It Works
 
 Query any player, team, or division in plain English. The pipeline scrapes match results, goal scorers, and league standings from England Hockey every week and transforms the data into a star schema in BigQuery. Tableau Cloud connects to BigQuery and serves the data model, which Claude queries via Tableau MCP.
 
@@ -40,7 +38,7 @@ Query any player, team, or division in plain English. The pipeline scrapes match
 
 ## Views
 
-Three recruitment questions, answered by Claude querying live production data through Tableau MCP. Screening approach adapted from [Trym Sorum's Data Scout Method](https://trymso.substack.com/p/the-data-scout-method-a-3-step-framework).
+Three recruitment questions, answered by using an LLM (Claude Code) to query live production data through Tableau MCP and build HTML views by "talking to the data". Screening approach adapted from [Trym Sorum's Data Scout Method](https://trymso.substack.com/p/the-data-scout-method-a-3-step-framework).
 
 1. **Filter**: Who are the top goal scorers in the Premier Division and Division 1 this season?
    - Narrows hundreds of scorers across England's top two tiers down to a shortlist worth watching
