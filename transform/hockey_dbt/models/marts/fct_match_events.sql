@@ -47,6 +47,9 @@ final AS (
         p.player_id,
         t.team_id,
 
+        -- Denormalised team name
+        e.team AS team_name,
+
         -- Competition context (denormalised for filtering, via match join)
         m.competition_group,
         m.competition AS competition_name,

@@ -1,0 +1,771 @@
+semantic_layer:
+  name: England Hockey Analytics
+  description: >
+    Star schema data model for England Hockey league data covering men's and women's
+    divisions across multiple seasons (2022-2026). Contains match results, league standings,
+    goal scorers, and disciplinary records (cards). Data is scraped weekly from the
+    England Hockey website and transformed via dbt into BigQuery.
+  database: BigQuery
+  project: england-hockey-analytics
+  dataset: hockey_prod
+  region: europe-west2
+  tableau:
+    datasource_id: 4f4f0f96-8dfd-4e81-80df-d673a78751a4
+    datasource_name: England Hockey Analytics (hockey_prod)
+    type: Published Data Source
+    note: >
+      The datasource ID is not sensitive — it is a reference identifier, not a credential.
+      Authentication (PAT token, site URL) is configured separately in the MCP server settings
+      and is never stored in this file or the repository.
+
+# =============================================================================
+# DIMENSION TABLES
+# =============================================================================
+
+tables:
+
+  # ---------------------------------------------------------------------------
+  # dim_seasons
+  # ---------------------------------------------------------------------------
+  - name: dim_seasons
+    type: dimension
+    description: >
+      One row per hockey season. Seasons run from September to May and are named
+      by their start year (e.g. "2025-2026"). Use this to filter or group any
+      analysis by season.
+    grain: One row per season
+    primary_key: season_id
+    columns:
+      - name: season_id
+        type: integer
+        description: Surrogate key. Chronologically ordered (1 = earliest season).
+      - name: season_name
+        type: string
+        description: Human-readable season label, e.g. "2022-2023", "2025-2026". Always YYYY-YYYY format.
+      - name: start_date
+        type: date
+        description: Date of the first match in this season.
+      - name: end_date
+        type: date
+        description: Date of the last match in this season.
+
+  # ---------------------------------------------------------------------------
+  # dim_phases
+  # ---------------------------------------------------------------------------
+  - name: dim_phases
+    type: dimension
+    description: >
+      One row per competition phase. Premier League seasons are split into
+      Phase 1 (round-robin) and Phase 2 (split into top/bottom groups).
+      Only 2 phases currently exist. Non-Premier League competitions do not
+      use phases, so their fact rows will have NULL phase_id.
+    grain: One row per phase
+    primary_key: phase_id
+    columns:
+      - name: phase_id
+        type: integer
+        description: Surrogate key. 1 = Phase 1, 2 = Phase 2.
+      - name: phase_name
+        type: string
+        description: Display name, e.g. "Phase 1", "Phase 2".
+      - name: phase_order
+        type: integer
+        description: Sort order. 1 = Phase 1, 2 = Phase 2, 99 = other/future.
+
+  # ---------------------------------------------------------------------------
+  # dim_teams
+  # ---------------------------------------------------------------------------
+  - name: dim_teams
+    type: dimension
+    description: >
+      One row per unique team across all seasons and divisions. Team names include
+      a gender/squad suffix (e.g. "Surbiton W1" for women's first team,
+      "Hampstead & Westminster M1" for men's). Division is NOT stored here because
+      teams can be promoted or relegated between seasons — filter by competition_name
+      on the fact tables instead.
+    grain: One row per unique team name
+    primary_key: team_id
+    columns:
+      - name: team_id
+        type: integer
+        description: Surrogate key. Alphabetically ordered by team name.
+      - name: team_name
+        type: string
+        description: >
+          Full team name including gender suffix, e.g. "Surbiton W1",
+          "Old Georgians M1". The suffix indicates W = Women's, M = Men's.
+
+  # ---------------------------------------------------------------------------
+  # dim_players
+  # ---------------------------------------------------------------------------
+  - name: dim_players
+    type: dimension
+    description: >
+      One row per unique player name. ONLY contains players who have scored a goal
+      or received a card — not a complete squad list. No demographic data available
+      (no age, position, nationality, or squad number).
+    grain: One row per unique player name
+    primary_key: player_id
+    columns:
+      - name: player_id
+        type: integer
+        description: Surrogate key. Alphabetically ordered by player name.
+      - name: player_name
+        type: string
+        description: Player's display name as shown on the England Hockey website.
+
+# =============================================================================
+# FACT TABLES
+# =============================================================================
+
+  # ---------------------------------------------------------------------------
+  # fct_matches (ANCHOR FACT)
+  # ---------------------------------------------------------------------------
+  - name: fct_matches
+    type: fact
+    description: >
+      One row per match. The anchor fact table — fct_team_matches and
+      fct_match_events both reference this via match_id. Contains both completed
+      matches (with scores) and upcoming fixtures (scores are NULL).
+      Includes men's and women's matches across all divisions.
+    grain: One row per match
+    primary_key: match_id
+    foreign_keys:
+      - column: season_id
+        references: dim_seasons.season_id
+      - column: phase_id
+        references: dim_phases.phase_id
+        nullable: true
+        note: "NULL for non-Premier League competitions"
+      - column: home_team_id
+        references: dim_teams.team_id
+        nullable: true
+        note: "NULL when team is TBC (playoff placeholders)"
+      - column: away_team_id
+        references: dim_teams.team_id
+        nullable: true
+        note: "NULL when team is TBC (playoff placeholders)"
+    columns:
+      - name: match_id
+        type: string
+        description: Surrogate key for the match (hash generated by dbt_utils.generate_surrogate_key).
+      - name: season_id
+        type: integer
+        description: FK to dim_seasons.
+      - name: phase_id
+        type: integer
+        description: FK to dim_phases. NULL for non-Premier League matches.
+      - name: home_team_id
+        type: integer
+        description: FK to dim_teams for the home team (role-playing dimension).
+      - name: away_team_id
+        type: integer
+        description: FK to dim_teams for the away team (role-playing dimension).
+      - name: home_team_name
+        type: string
+        description: Name of the home team, e.g. "Surbiton W1".
+      - name: away_team_name
+        type: string
+        description: Name of the away team, e.g. "Old Georgians M1".
+      - name: competition_group
+        type: string
+        description: >
+          Top-level competition grouping, e.g. "EH Adult EHL Womens",
+          "EH Adult EHL Mens". Use this to filter by gender.
+      - name: competition_name
+        type: string
+        description: >
+          Specific league/division, e.g. "Womens Premier Division",
+          "Mens Division 1 North". Use this to filter by division.
+      - name: match_date
+        type: date
+        description: Date the match is/was played.
+      - name: match_time
+        type: string
+        description: Scheduled start time (HH:MM format). Can be NULL.
+      - name: home_score
+        type: integer
+        description: Goals scored by the home team. NULL if match not yet played.
+      - name: away_score
+        type: integer
+        description: Goals scored by the away team. NULL if match not yet played.
+      - name: venue
+        type: string
+        description: Venue name. Often NULL in source data.
+      - name: match_status
+        type: string
+        description: >
+          Computed field: "Completed" (has scores), "Upcoming" (future date,
+          no scores), or "Missing result" (past date, no scores).
+
+  # ---------------------------------------------------------------------------
+  # fct_team_matches (CHILD FACT)
+  # ---------------------------------------------------------------------------
+  - name: fct_team_matches
+    type: fact
+    description: >
+      Two rows per match — one from each team's perspective. Use this table for
+      team-centric analysis: "How did Team X perform across all their matches?"
+      Each row gives a team's view with their opponent, whether they were home
+      or away, and the scores.
+    grain: One row per team per match (2 rows per match)
+    primary_key: team_match_id
+    foreign_keys:
+      - column: match_id
+        references: fct_matches.match_id
+      - column: season_id
+        references: dim_seasons.season_id
+      - column: phase_id
+        references: dim_phases.phase_id
+        nullable: true
+      - column: team_id
+        references: dim_teams.team_id
+        nullable: true
+      - column: opponent_id
+        references: dim_teams.team_id
+        nullable: true
+    columns:
+      - name: team_match_id
+        type: string
+        description: Surrogate key for the team-match combination (hash generated by dbt_utils.generate_surrogate_key).
+      - name: match_id
+        type: string
+        description: FK to fct_matches. Links back to the parent match.
+      - name: season_id
+        type: integer
+        description: FK to dim_seasons.
+      - name: phase_id
+        type: integer
+        description: FK to dim_phases. NULL for non-Premier League.
+      - name: team_id
+        type: integer
+        description: FK to dim_teams. The team this row represents.
+      - name: opponent_id
+        type: integer
+        description: FK to dim_teams. The opposing team.
+      - name: home_team_name
+        type: string
+        description: Name of whichever team was home in this match. Derived from is_home.
+      - name: away_team_name
+        type: string
+        description: Name of whichever team was away in this match. Derived from is_home.
+      - name: competition_group
+        type: string
+        description: >
+          Top-level competition grouping, e.g. "EH Adult EHL Womens".
+          Use this to filter by gender.
+      - name: competition_name
+        type: string
+        description: >
+          Specific league/division, e.g. "Womens Premier Division".
+          Use this to filter by division.
+      - name: is_home
+        type: boolean
+        description: TRUE if this team was the home team, FALSE if away.
+      - name: match_date
+        type: date
+        description: Date of the match.
+      - name: venue
+        type: string
+        description: Venue name. Can be NULL.
+      - name: home_score
+        type: integer
+        description: Goals scored by the home team. NULL if not yet played.
+      - name: away_score
+        type: integer
+        description: Goals scored by the away team. NULL if not yet played.
+
+  # ---------------------------------------------------------------------------
+  # fct_match_events (CHILD FACT)
+  # ---------------------------------------------------------------------------
+  - name: fct_match_events
+    type: fact
+    description: >
+      One row per in-match event. Contains goals and cards only.
+      Goals include field goals (FG) and penalty corners (PC). Cards include
+      green, yellow, and red. No other event types exist in the data.
+    grain: One row per event (goal or card)
+    primary_key: event_id
+    foreign_keys:
+      - column: match_id
+        references: fct_matches.match_id
+      - column: player_id
+        references: dim_players.player_id
+      - column: team_id
+        references: dim_teams.team_id
+    columns:
+      - name: event_id
+        type: string
+        description: Surrogate key for the event (hash generated by dbt_utils.generate_surrogate_key).
+      - name: match_id
+        type: string
+        description: FK to fct_matches. Which match this event occurred in.
+      - name: player_id
+        type: integer
+        description: FK to dim_players. Who scored the goal or received the card.
+      - name: team_id
+        type: integer
+        description: FK to dim_teams. Which team the player belongs to.
+      - name: team_name
+        type: string
+        description: Name of the team the player belongs to, e.g. "Surbiton W1".
+      - name: competition_group
+        type: string
+        description: >
+          Top-level competition grouping, e.g. "EH Adult EHL Womens".
+          Use this to filter by gender.
+      - name: competition_name
+        type: string
+        description: >
+          Specific league/division, e.g. "Womens Premier Division".
+          Use this to filter by division.
+      - name: event_type
+        type: string
+        description: "Either 'goal' or 'card'. No other values exist."
+      - name: event_subtype
+        type: string
+        description: >
+          For goals: "FG" (field goal), "PC" (penalty corner), or "PS" (penalty stroke).
+          For cards: "Green", "Yellow", or "Red".
+          Can be NULL if subtype was not recorded.
+      - name: minute
+        type: integer
+        description: Match minute when the event occurred. Can be NULL.
+
+  # ---------------------------------------------------------------------------
+  # fct_standings (CHILD FACT)
+  # ---------------------------------------------------------------------------
+  - name: fct_standings
+    type: fact
+    description: >
+      One row per team per season per phase — a snapshot of the league table.
+      This is the richest table for season-level team performance: points, wins,
+      draws, losses, goals for/against, goal difference, and league position.
+      This table is independent from fct_matches (no match_id FK). It represents
+      the aggregated league table as published on the England Hockey website.
+    grain: One row per team per season per phase
+    primary_key: standings_id
+    foreign_keys:
+      - column: season_id
+        references: dim_seasons.season_id
+      - column: phase_id
+        references: dim_phases.phase_id
+        nullable: true
+      - column: team_id
+        references: dim_teams.team_id
+    columns:
+      - name: standings_id
+        type: integer
+        description: Surrogate key for the standings row.
+      - name: season_id
+        type: integer
+        description: FK to dim_seasons.
+      - name: phase_id
+        type: integer
+        description: FK to dim_phases. NULL for non-Premier League.
+      - name: team_id
+        type: integer
+        description: FK to dim_teams.
+      - name: team_name
+        type: string
+        description: Name of the team in the standings, e.g. "Surbiton W1".
+      - name: competition_group
+        type: string
+        description: >
+          Top-level competition grouping, e.g. "EH Adult EHL Womens".
+          Use this to filter by gender.
+      - name: competition_name
+        type: string
+        description: >
+          Specific league/division, e.g. "Womens Premier Division".
+          Use this to filter by division.
+      - name: position
+        type: integer
+        description: League table position (1 = top of table).
+      - name: played
+        type: integer
+        description: Total matches played.
+      - name: won
+        type: integer
+        description: Total matches won.
+      - name: drawn
+        type: integer
+        description: Total matches drawn.
+      - name: lost
+        type: integer
+        description: Total matches lost.
+      - name: goals_for
+        type: integer
+        description: Total goals scored by this team in the season/phase.
+      - name: goals_against
+        type: integer
+        description: Total goals conceded by this team in the season/phase.
+      - name: goal_difference
+        type: integer
+        description: goals_for minus goals_against.
+      - name: points
+        type: integer
+        description: Total league points (typically 3 for win, 1 for draw, 0 for loss).
+      - name: snapshot_date
+        type: date
+        description: Date when these standings were scraped from the website.
+
+# =============================================================================
+# RELATIONSHIPS
+# =============================================================================
+# In Tableau, these are configured as data model relationships (not SQL joins).
+# Tableau automatically handles the join logic based on the related fields.
+
+relationships:
+  # Dimensions shared across facts
+  - from: fct_matches
+    to: dim_seasons
+    on: season_id
+  - from: fct_matches
+    to: dim_phases
+    on: phase_id
+  - from: fct_matches
+    to: dim_teams
+    on: home_team_id = team_id
+    role: home_team
+  - from: fct_matches
+    to: dim_teams
+    on: away_team_id = team_id
+    role: away_team
+
+  - from: fct_team_matches
+    to: fct_matches
+    on: match_id
+  - from: fct_team_matches
+    to: dim_seasons
+    on: season_id
+  - from: fct_team_matches
+    to: dim_phases
+    on: phase_id
+  - from: fct_team_matches
+    to: dim_teams
+    on: team_id
+    role: team
+  - from: fct_team_matches
+    to: dim_teams
+    on: opponent_id = team_id
+    role: opponent
+
+  - from: fct_match_events
+    to: fct_matches
+    on: match_id
+  - from: fct_match_events
+    to: dim_players
+    on: player_id
+  - from: fct_match_events
+    to: dim_teams
+    on: team_id
+
+  - from: fct_standings
+    to: dim_seasons
+    on: season_id
+  - from: fct_standings
+    to: dim_phases
+    on: phase_id
+  - from: fct_standings
+    to: dim_teams
+    on: team_id
+
+# =============================================================================
+# TABLEAU FIELD MAPPING
+# =============================================================================
+# Team names are denormalised directly into fact tables, so dim_teams is no
+# longer joined in Tableau. This section is retained for reference.
+#
+# datasource_id: 4f4f0f96-8dfd-4e81-80df-d673a78751a4
+
+tableau_field_mapping:
+  note: >
+    Team names are now denormalised directly into fact tables (home_team_name,
+    away_team_name, team_name). The 6 role-playing dim_teams instances previously
+    required in Tableau have been removed from the data model. Team name fields
+    appear directly on each fact table — no dimension join needed.
+
+# =============================================================================
+# LEAGUE HIERARCHY
+# =============================================================================
+# The England Hockey League (EHL) has a 3-tier pyramid structure.
+# Men's and women's are separate competitions — never compared cross-gender.
+# Recruitment scouting looks DOWN the pyramid: a Premier Division club losing
+# their top scorer would look at Division 1 and Conference for replacements.
+
+league_hierarchy:
+  mens:
+    tier_1:
+      name: Premier Division
+      competition_names:
+        - "Open - Men's Premier Division"
+      regions: 1  # National
+      note: Top tier. Phase 1 (round-robin) then Phase 2 (split into groups).
+    tier_2:
+      name: Division 1
+      competition_names:
+        - "Open - Men's Division 1 North"
+        - "Open - Men's Division 1 South"
+      regions: 2  # North/South split
+    tier_3:
+      name: Conference
+      competition_names:
+        - "Open - Men's Conference East"
+        - "Open - Men's Conference West"
+        - "Open - Men's Conference North"
+        - "Open - Men's Conference Midlands"
+      regions: 4  # Regional split
+
+  womens:
+    tier_1:
+      name: Premier Division
+      competition_names:
+        - "Womens Premier Division"
+      regions: 1  # National
+      note: Top tier. Phase 1 (round-robin) then Phase 2 (split into groups).
+    tier_2:
+      name: Division 1
+      competition_names:
+        - "Women's Division 1 North"
+        - "Women's Division 1 South"
+      regions: 2  # North/South split
+    tier_3:
+      name: Conference
+      competition_names:
+        - "Women's Conference East"
+        - "Women's Conference West"
+        - "Women's Conference North"
+        - "Women's Conference Midlands"
+      regions: 4  # Regional split
+
+# =============================================================================
+# DATA BOUNDARIES
+# =============================================================================
+
+data_coverage:
+  available:
+    - Match results (home score, away score) for completed matches
+    - Upcoming fixtures (date, time, teams) with no scores yet
+    - League standings (position, points, W/D/L, goals for/against, goal difference)
+    - Goal scorers with goal type (field goal, penalty corner, or penalty stroke)
+    - Disciplinary cards (green, yellow, red) with player and minute
+    - Competition and division context (men's vs women's, Premier vs Division 1, etc.)
+    - Match venues (partial — many are NULL in source data)
+    - Season date ranges (start and end dates)
+    - Competition phases (Phase 1 and Phase 2 for Premier League)
+    - Home vs away team designation
+    - Men's and women's divisions across multiple tiers
+
+  not_available:
+    - Assists (not tracked in source data)
+    - Shots or shots on target
+    - Possession statistics
+    - Tackles, interceptions, or other defensive stats
+    - Saves or goalkeeper statistics
+    - Attendance or crowd figures
+    - Player demographics (age, position, nationality, height, weight)
+    - Player squad numbers or shirt numbers
+    - Team rosters or full squad lists (only players with goals/cards appear)
+    - Referee information
+    - Weather or pitch conditions
+    - Cup or friendly matches (league matches only)
+    - Real-time or live match data (scraped weekly, not live)
+    - Historical data before 2022-2023 season
+    - Transfer or player movement data
+    - Coach or management information
+
+# =============================================================================
+# EXAMPLE QUESTIONS
+# =============================================================================
+
+examples:
+  valid_questions:
+    - question: "Which team scored the most goals in the 2024-2025 season?"
+      use_table: fct_standings
+      use_column: goals_for
+      note: "Use fct_standings for season-level goal totals"
+
+    - question: "What is Surbiton W1's win/loss record this season?"
+      use_table: fct_standings
+      use_columns: [won, drawn, lost]
+
+    - question: "Who are the top goal scorers in the Women's Premier Division?"
+      use_table: fct_match_events
+      use_filter: "event_type = 'goal' AND competition_name = 'Womens Premier Division'"
+      note: "Group by player_name, count events"
+
+    - question: "How many penalty corners vs field goals were scored?"
+      use_table: fct_match_events
+      use_columns: [event_type, event_subtype]
+      use_filter: "event_type = 'goal'"
+
+    - question: "Which team has the best goal difference in the men's league?"
+      use_table: fct_standings
+      use_columns: [goal_difference, competition_group]
+      use_filter: "competition_group LIKE '%Mens%'"
+
+    - question: "How many matches has each team played at home vs away?"
+      use_table: fct_team_matches
+      use_column: is_home
+
+    - question: "What are the upcoming fixtures for the Women's Premier Division?"
+      use_table: fct_matches
+      use_filter: "match_status = 'Upcoming' AND competition_name = 'Womens Premier Division'"
+
+    - question: "Which teams were promoted or relegated?"
+      use_table: fct_standings
+      use_columns: [position, season_id, competition_name]
+      note: "Compare positions across seasons within the same competition to infer movement"
+
+    - question: "How many yellow cards were given this season?"
+      use_table: fct_match_events
+      use_filter: "event_type = 'card' AND event_subtype = 'Yellow'"
+
+    - question: "What was the highest scoring match?"
+      use_table: fct_matches
+      use_columns: [home_score, away_score]
+      note: "Sum home_score + away_score, then order descending"
+
+    - question: "Show me results for the Men's Division 1 North"
+      use_table: fct_matches
+      use_filter: "competition_name = 'Mens Division 1 North' AND match_status = 'Completed'"
+
+  invalid_questions:
+    - question: "What was the average attendance this season?"
+      reason: "No attendance data is collected."
+
+    - question: "Who had the most assists?"
+      reason: "Assists are not tracked in the source data."
+
+    - question: "What was the possession split in the match?"
+      reason: "No possession statistics available."
+
+    - question: "How many shots on target did Surbiton have?"
+      reason: "Shot data is not collected."
+
+    - question: "Who is the oldest player in the league?"
+      reason: "No player demographic data (age, DOB) available."
+
+    - question: "What position does this player play?"
+      reason: "Player positions are not in the dataset."
+
+    - question: "How many saves did the goalkeeper make?"
+      reason: "No goalkeeper or save statistics available."
+
+    - question: "What was the referee's name for this match?"
+      reason: "Referee data is not collected."
+
+    - question: "Show me results from the 2020-2021 season."
+      reason: "Data only covers 2022-2023 onwards. No historical data before that."
+
+    - question: "How many fans watched the cup final?"
+      reason: "No attendance data, and cup matches may not be included."
+
+# =============================================================================
+# QUERYING VIA TABLEAU MCP
+# =============================================================================
+# Guidelines for querying this datasource through the Tableau MCP tools.
+
+query_guidelines:
+  datasource_id: 4f4f0f96-8dfd-4e81-80df-d673a78751a4
+
+  before_querying:
+    - >
+      Always run get-datasource-metadata FIRST to get actual Tableau field names
+      before constructing any queries. Do not rely on common_filters below —
+      competition names may change between seasons or after source data refreshes.
+    - >
+      Domain context: League rules at
+      https://www.englandhockey.co.uk/media/news/england-hockey-league-premier-division-2025-26-season-explained
+      and screenshot at docs/research/League_Rules.png
+
+  rate_limiting:
+    - Run queries sequentially — never send parallel query-datasource calls.
+      Tableau Cloud returns 401 errors when multiple queries hit simultaneously.
+    - One query at a time, wait for the response before sending the next.
+
+  field_names:
+    note: >
+      Tableau disambiguates fields that appear on multiple tables by appending
+      the table name in parentheses. Always use the disambiguated name when
+      querying fields that exist on more than one table.
+    examples:
+      - Competition Name (Fct Match Events)
+      - Competition Name (Fct Standings)
+      - Competition Name (Fct Team Matches)
+      - team_name (fct_match_events)
+      - team_name (fct_standings)
+      - home_team_name (fct_team_matches)
+      - away_team_name (fct_team_matches)
+    unambiguous_fields:
+      - Player Name
+      - Season Name
+      - Phase Name
+      - Event Type
+      - Event Subtype
+      - Match Status
+      - Is Home
+      - Position
+      - Played
+      - Won
+      - Drawn
+      - Lost
+      - Goals For
+      - Goals Against
+      - Goal Difference
+      - Points
+
+  common_filters:
+    current_season: "Season Name = '2025-2026'"
+    goals_only: "Event Type = 'goal'"
+    cards_only: "Event Type = 'card'"
+    completed_matches: "Match Status = 'Completed'"
+    womens_premier: "Competition Name = 'Womens Premier Division'"
+    mens_premier: "Competition Name = 'Mens Premier Division'"
+
+  important_notes:
+    - >
+      fct_match_events contains BOTH goals and cards. When counting goals,
+      you MUST filter by Event Type = 'goal' (as a context filter) BEFORE
+      counting. Without this filter, COUNT(Event Id) includes cards too.
+    - >
+      Event subtype for goals is 'FG' (field goal), 'PC' (penalty corner), or 'PS' (penalty stroke).
+      Event subtype for cards is 'Green', 'Yellow', or 'Red'.
+      Do not confuse these — a green card is a disciplinary event, not a goal.
+
+  query_patterns:
+    top_scorers:
+      description: Top N goal scorers for a division and season
+      fields:
+        - Player Name (dimension)
+        - team_name (fct_match_events) (dimension, aliased as Team)
+        - Event Id (COUNT, aliased as Goals, sort DESC)
+      filters:
+        - SET filter on Event Type = ['goal'] (context = true) — REQUIRED to exclude cards
+        - SET filter on Season Name (context = true)
+        - SET filter on Competition Name (Fct Match Events) (context = true)
+        - TOP filter on Player Name, howMany = N, measure = COUNT(Event Id) (context = false)
+
+    league_standings:
+      description: Current league table for a division and season
+      fields:
+        - team_name (fct_standings) (dimension, aliased as Team)
+        - Position (MIN, to get latest)
+        - Points (SUM)
+      filters:
+        - SET filter on Season Name (context = true)
+        - SET filter on Competition Name (Fct Standings) (context = true)
+
+    team_results:
+      description: Match results for a specific team
+      fields:
+        - home_team_name (dimension)
+        - away_team_name (dimension)
+        - Home Score (dimension)
+        - Away Score (dimension)
+        - Match Date (dimension, sort DESC)
+      filters:
+        - SET filter on Season Name (context = true)
+        - SET filter on Competition Name (context = true)
+        - SET filter on Match Status = ['Completed'] (context = true)

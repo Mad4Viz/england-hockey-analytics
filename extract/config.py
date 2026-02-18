@@ -4,6 +4,7 @@ All URLs, selectors, rate limits, and constants for web scraping.
 """
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 from typing import Final, Optional
 
@@ -14,7 +15,8 @@ from typing import Final, Optional
 
 PROJECT_ROOT: Final[Path] = Path(__file__).parent.parent
 DATA_DIR: Final[Path] = PROJECT_ROOT / "data"
-SAMPLE_DIR: Final[Path] = DATA_DIR / "sample"
+# HOCKEY_OUTPUT_DIR env var allows Prefect flow to redirect output to pre_production/
+SAMPLE_DIR: Final[Path] = Path(os.environ.get("HOCKEY_OUTPUT_DIR", str(DATA_DIR / "sample")))
 TEST_DIR: Final[Path] = SAMPLE_DIR / "Test"
 LOG_DIR: Final[Path] = PROJECT_ROOT / "logs"
 

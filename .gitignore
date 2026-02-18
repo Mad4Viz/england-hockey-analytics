@@ -35,6 +35,8 @@ gcp-key*.json
 data/raw/
 data/processed/
 data/production/
+data/pre_production/
+data/backups/
 *.csv
 *.parquet
 !data/sample/*.csv
@@ -67,18 +69,25 @@ logs/
 # Working/planning docs
 PROJECT_PLAN.md
 PROJECT_PLAN_DETAILED.md
-CONTINUATION_NOTES.md
+README_OLD.md
+PREFECT_CONTINUATION.md
 docs/research/
 docs/BUSINESS_SCENARIO.md
 extract/PHASE3_PLAN.md
+extract/SCRAPER_GUIDE.md
 extract/notes/
+load/BIGQUERY_GUIDE.md
+orchestrate/PREFECT_GUIDE.md
+orchestrate/run_pipeline.sh
+
+# Prompts and continuation notes
+prompts/
 
 # Placeholder/empty modules
 # load/ - now tracked (contains documentation)
 
 # dbt boilerplate
 transform/hockey_dbt/models/example/
-transform/hockey_dbt/README.md
 
 # Debug and test data
 data/sample/Test/
@@ -86,6 +95,9 @@ data/sample/debug*.html
 data/sample/filter_options.json
 data/sample/scrape_progress_summary.csv
 data/scrape_state.json
+
+# View source files (HTML references, not for GitHub)
+screenshots/*.html
 
 #DBT Bolier Plates
 transform/hockey_dbt/analyses/

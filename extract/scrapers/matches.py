@@ -122,6 +122,7 @@ class MatchesScraper(BaseScraper):
         limit: int = 0,
         limit_per_competition: int = 0,
         on_batch_complete: Optional[Callable[[List[MatchRow]], None]] = None,
+        since_date: Optional[str] = None,
     ) -> List[MatchRow]:
         """
         Scrape all matches across all available dates.
@@ -132,6 +133,8 @@ class MatchesScraper(BaseScraper):
             on_batch_complete: Optional callback called after each date with new matches.
                                Signature: callback(matches: List[MatchRow]) -> None
                                Use this for incremental saving.
+            since_date: Only scrape match days on or after this date (YYYY-MM-DD).
+                        None = scrape all available dates.
 
         Returns:
             List of MatchRow objects (both played and upcoming)
@@ -150,11 +153,18 @@ class MatchesScraper(BaseScraper):
 
         # 2. Get all available match days from date picker
         available_dates = self._get_available_dates()
-        self.logger.info(f"Found {len(available_dates)} match days")
+        total_dates = len(available_dates)
+
+        # 3. Filter by --since date if provided
+        if since_date:
+            available_dates = [d for d in available_dates if d["date"] >= since_date]
+            self.logger.info(f"Filtering dates since {since_date}: {len(available_dates)} of {total_dates} match days")
+        else:
+            self.logger.info(f"Found {total_dates} match days (no --since filter)")
 
         all_matches = []
 
-        # 3. Iterate through each date and extract matches
+        # 4. Iterate through each date and extract matches
         for date_info in available_dates:
             match_day = date_info["date"]  # YYYY-MM-DD
             self.logger.info(f"Scraping matches for {match_day}")

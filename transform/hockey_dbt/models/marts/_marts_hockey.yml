@@ -119,6 +119,14 @@ models:
           - relationships:
               to: ref('dim_teams')
               field: team_id
+      - name: home_team_name
+        description: "Denormalised home team name (from int_matches)"
+        tests:
+          - not_null
+      - name: away_team_name
+        description: "Denormalised away team name (from int_matches)"
+        tests:
+          - not_null
       - name: competition_group
         description: "Competition grouping (e.g., 'EH Adult EHL Womens', 'EH Adult EHL Mens')"
         tests:
@@ -188,6 +196,14 @@ models:
           - relationships:
               to: ref('dim_teams')
               field: team_id
+      - name: home_team_name
+        description: "Denormalised home team name (derived via CASE WHEN from is_home, team, opponent)"
+        tests:
+          - not_null
+      - name: away_team_name
+        description: "Denormalised away team name (derived via CASE WHEN from is_home, team, opponent)"
+        tests:
+          - not_null
       - name: competition_group
         description: "Competition grouping (e.g., 'EH Adult EHL Womens', 'EH Adult EHL Mens')"
         tests:
@@ -242,6 +258,10 @@ models:
           - relationships:
               to: ref('dim_teams')
               field: team_id
+      - name: team_name
+        description: "Denormalised team name (from stg_match_events)"
+        tests:
+          - not_null
       - name: competition_group
         description: "Competition grouping (e.g., 'EH Adult EHL Womens', 'EH Adult EHL Mens')"
         tests:
@@ -291,6 +311,10 @@ models:
           - relationships:
               to: ref('dim_teams')
               field: team_id
+      - name: team_name
+        description: "Denormalised team name (from stg_standings)"
+        tests:
+          - not_null
       - name: competition_group
         description: "Competition grouping (e.g., 'EH Adult EHL Womens', 'EH Adult EHL Mens')"
         tests:

@@ -1,0 +1,26 @@
+# Prefect Deployment Configuration
+#
+# Two deployments:
+#   1. weekly-incremental (SCHEDULED) - runs every Monday 8am, only grabs new results
+#   2. full-refresh (MANUAL) - trigger from Prefect dashboard to re-scrape everything
+
+deployments:
+  - name: hockey-weekly-incremental
+    entrypoint: orchestrate/hockey_flow.py:hockey_pipeline
+    description: "Scheduled weekly refresh - scrapes only new match results since last run"
+    parameters:
+      full_refresh: false
+    schedule:
+      cron: "0 8 * * 1"    # Every Monday 08:00 UTC
+      timezone: "Europe/London"
+    work_pool:
+      name: default-agent-pool
+
+  - name: hockey-full-refresh
+    entrypoint: orchestrate/hockey_flow.py:hockey_pipeline
+    description: "Manual trigger - re-scrapes ALL data from scratch (use when adding new seasons or fixing data gaps)"
+    parameters:
+      full_refresh: true
+    # No schedule - triggered manually from the Prefect dashboard
+    work_pool:
+      name: default-agent-pool

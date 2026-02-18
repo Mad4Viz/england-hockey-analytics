@@ -110,6 +110,14 @@ Examples:
         help="Limit matches per competition (0 = no limit). Useful for testing all divisions.",
     )
 
+    parser.add_argument(
+        "--since",
+        type=str,
+        default=None,
+        help="Only scrape match days on or after this date (YYYY-MM-DD). "
+             "Used by Prefect flow for incremental runs. Omit to scrape all dates.",
+    )
+
     return parser.parse_args()
 
 
@@ -318,6 +326,7 @@ def run_matches_scraper(args, logger) -> Dict[str, Any]:
                     limit=args.limit,
                     limit_per_competition=args.limit_per_competition,
                     on_batch_complete=on_batch_complete,
+                    since_date=args.since,
                 )
 
                 if not matches:
@@ -374,6 +383,7 @@ def run_match_events_scraper(args, logger) -> Dict[str, Any]:
 
     # Get URLs and seasons of completed matches (those with results available)
     match_info = []
+    skipped_before_since = 0
     with open(matches_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -385,8 +395,18 @@ def run_match_events_scraper(args, logger) -> Dict[str, Any]:
             if has_result:
                 url = row.get("match_url")
                 season = row.get("season", "")
+                match_date = row.get("match_date", "")
+
+                # Filter by --since date if provided
+                if args.since and match_date < args.since:
+                    skipped_before_since += 1
+                    continue
+
                 if url:
                     match_info.append({"url": url, "season": season})
+
+    if args.since and skipped_before_since > 0:
+        logger.info(f"Skipped {skipped_before_since} matches before {args.since} (already have events)")
 
     if not match_info:
         logger.warning("No completed matches found in matches.csv")
@@ -565,6 +585,7 @@ def main() -> int:
     logger.info(f"Season: {args.season}")
     logger.info(f"Headless: {args.headless}")
     logger.info(f"Full refresh: {args.full_refresh}")
+    logger.info(f"Since date: {args.since or 'None (full season)'}")
     logger.info(f"Test mode: {args.test}")
     if args.limit > 0:
         logger.info(f"Match limit (total): {args.limit}")

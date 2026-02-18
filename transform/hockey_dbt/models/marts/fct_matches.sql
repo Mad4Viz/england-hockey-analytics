@@ -47,6 +47,10 @@ final AS (
         home.team_id AS home_team_id,
         away.team_id AS away_team_id,
 
+        -- Denormalised team names
+        m.home_team AS home_team_name,
+        m.away_team AS away_team_name,
+
         -- Date/time attributes (kept on fact for filtering)
         m.match_date,
         m.match_time,

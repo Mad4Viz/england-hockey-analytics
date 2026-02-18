@@ -44,6 +44,9 @@ final AS (
         p.phase_id,
         t.team_id,
 
+        -- Denormalised team name
+        st.team AS team_name,
+
         -- Competition context (denormalised for filtering)
         st.competition_group,
         st.competition AS competition_name,
