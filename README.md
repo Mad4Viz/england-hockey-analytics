@@ -37,7 +37,7 @@ Query any player, team, or division in plain English. The pipeline scrapes match
 
 Three recruitment questions, answered by using an LLM (Claude Code) to query live production data through Tableau MCP and build HTML views by "talking to the data". Screening approach adapted from [Trym Sorum's Data Scout Method](https://trymso.substack.com/p/the-data-scout-method-a-3-step-framework).
 
-1. **Filter**: Who are the top goal scorers in the Premier Division and Division 1 this season?
+1. **Filter**: Who are the top goal scorers in the Premier Division and Division 1 this season? (The Top 2 tiers)
    - Narrows hundreds of scorers across England's top two tiers down to a shortlist worth watching
 2. **Profile**: What's the split between field goals and penalty corners?
    - Penalty corner specialists are a specific recruitment target — clubs need to know if goals come from set pieces or open play
