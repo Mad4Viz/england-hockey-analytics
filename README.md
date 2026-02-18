@@ -4,6 +4,11 @@ Goal scorer data on England Hockey is buried inside individual match pages. You 
 
 Built for club analysts screening goal scorers for recruitment shortlists.
 
+<p>
+<img src="screenshots/source_fixtures.png" alt="England Hockey fixtures page" width="370">
+<img src="screenshots/source_match.png" alt="England Hockey match page" width="370">
+</p>
+
 ---
 
 <img src="screenshots/architecture.png" alt="Project Architecture" width="750">
