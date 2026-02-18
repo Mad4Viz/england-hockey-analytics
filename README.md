@@ -24,7 +24,6 @@ Query any player, team, or division in plain English. The pipeline scrapes match
 | Orchestrate | Prefect runs the full pipeline weekly | [`orchestrate/`](orchestrate/) |
 | Serve | Tableau Cloud published data source with Claude Code via Tableau MCP for plain English queries | [`docs/semantic_layer.yml`](docs/semantic_layer.yml) |
 
----
 
 ## What the Data Can't Tell Us
 
@@ -33,8 +32,6 @@ Query any player, team, or division in plain English. The pipeline scrapes match
 - **No player demographics**: age, position, and nationality aren't published, so we can't filter by role or age group
 - **No playing time**: minutes on the pitch and individual games played aren't tracked, so goal tallies can't be normalised per game. Only team-level games played is available through standings
 - **Only players who scored or got carded appear**: full squad rosters aren't available, so this tool is scoped to goal scorer screening
-
----
 
 ## Views
 
@@ -69,7 +66,6 @@ Three recruitment questions, answered by using an LLM (Claude Code) to query liv
 
 Blank prior seasons and sudden jumps both need context: lower tiers, team moves, time abroad, and injury all affect the numbers. Cross-reference before shortlisting.
 
----
 
 ## The Data
 
@@ -80,9 +76,7 @@ Blank prior seasons and sudden jumps both need context: lower tiers, team moves,
 
 [Sample source data](data/sample/)
 
----
-
-## Data Model
+### Data Model
 
 4 fact tables and 4 dimension tables: built in dbt, hosted in BigQuery, published to Tableau Cloud as a single data source. [Semantic layer](docs/semantic_layer.yml)
 
@@ -94,15 +88,11 @@ Blank prior seasons and sudden jumps both need context: lower tiers, team moves,
 
 <img src="screenshots/tableau_model.png" alt="Tableau Data Model" width="750">
 
----
-
 ## What's Next
 
 - **Cloud Storage layer**: add Google Cloud Storage between the scraper and BigQuery for raw file backup, free batch loading, and incremental loads as data volume grows
 - **Player appearance scraping**: extend the scraper to capture match rosters, adding games played per player per season alongside goal tallies
 - **Player history enrichment**: widen the scraping scope to cover lower leagues, international leagues, and injury records, giving more context for gaps in prior season columns
-
----
 
 ## Contact
 
