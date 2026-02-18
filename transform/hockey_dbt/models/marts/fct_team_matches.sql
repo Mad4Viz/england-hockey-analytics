@@ -65,10 +65,6 @@ final AS (
         t.team_id,
         opp.team_id AS opponent_id,
 
-        -- Denormalised team names (home/away perspective for consistency with fct_matches)
-        CASE WHEN tm.is_home THEN tm.team ELSE tm.opponent END AS home_team_name,
-        CASE WHEN tm.is_home THEN tm.opponent ELSE tm.team END AS away_team_name,
-
         -- Competition context (denormalised for filtering)
         tm.competition_group,
         tm.competition AS competition_name,
@@ -80,7 +76,11 @@ final AS (
 
         -- Scores (denormalized for convenience)
         tm.home_score,
-        tm.away_score
+        tm.away_score,
+
+        -- Denormalised team names (home/away perspective for consistency with fct_matches)
+        CASE WHEN tm.is_home THEN tm.team ELSE tm.opponent END AS home_team_name,
+        CASE WHEN tm.is_home THEN tm.opponent ELSE tm.team END AS away_team_name
 
     FROM with_scores AS tm
 
