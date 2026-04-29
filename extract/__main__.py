@@ -24,7 +24,7 @@ from typing import Dict, List, Any
 import csv
 
 from extract.config import SAMPLE_DIR, TEST_DIR, StandingsRow, MatchRow, MatchEventRow
-from extract.competitions import build_filter_config, get_all_competitions_configs
+from extract.competitions import build_filter_config, get_all_competitions_configs, CURRENT_SEASON
 from extract.scrapers import StandingsScraper, MatchesScraper, MatchEventsScraper
 from extract.state import ScrapeState, is_monday
 from extract.utils import setup_logger, CSVWriter, CSVUpsertWriter
@@ -381,9 +381,24 @@ def run_match_events_scraper(args, logger) -> Dict[str, Any]:
         logger.info("Run --type matches first to generate match URLs")
         return {"data_type": "match_events", "status": "skipped", "reason": "matches.csv not found", "total_rows": 0}
 
+    # Pre-load URLs that already have events on disk. Used to break out of the
+    # --since trapdoor: a match older than --since would normally be skipped,
+    # but if it has NO events recorded yet we always retry it. England Hockey
+    # sometimes publishes goalscorer detail days after the result, so a match
+    # scraped on the Monday after kickoff can land on an empty info-board, get
+    # 0 events, and never be tried again under the old logic.
+    urls_with_events = set()
+    if output_path.exists():
+        with open(output_path, newline="", encoding="utf-8") as f:
+            for ev_row in csv.DictReader(f):
+                url = ev_row.get("match_url", "")
+                if url:
+                    urls_with_events.add(url)
+
     # Get URLs and seasons of completed matches (those with results available)
     match_info = []
     skipped_before_since = 0
+    forced_retry = 0
     with open(matches_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -397,16 +412,27 @@ def run_match_events_scraper(args, logger) -> Dict[str, Any]:
                 season = row.get("season", "")
                 match_date = row.get("match_date", "")
 
-                # Filter by --since date if provided
+                # Filter by --since date if provided — but only skip if we
+                # already have events for this URL, or the match is from a
+                # past season. Current-season matches with no events on disk
+                # are always retried, regardless of how old match_date is —
+                # this catches the trapdoor where events get published days
+                # after the match (Pool A/B finals, Play Offs, etc.).
+                # Past-season gaps are left alone (would need an explicit
+                # backfill, not an automatic retry).
                 if args.since and match_date < args.since:
-                    skipped_before_since += 1
-                    continue
+                    if url in urls_with_events or season != CURRENT_SEASON:
+                        skipped_before_since += 1
+                        continue
+                    forced_retry += 1
 
                 if url:
                     match_info.append({"url": url, "season": season})
 
     if args.since and skipped_before_since > 0:
         logger.info(f"Skipped {skipped_before_since} matches before {args.since} (already have events)")
+    if forced_retry > 0:
+        logger.info(f"Forcing retry of {forced_retry} matches before {args.since} (no events on disk yet)")
 
     if not match_info:
         logger.warning("No completed matches found in matches.csv")

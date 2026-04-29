@@ -284,6 +284,12 @@ class MatchEventsScraper(BaseScraper):
             # Parse icon type from href like "/assets/images/icons.svg#field-goal"
             icon_type = href.split("#")[-1] if "#" in href else href
 
+            # Strip "-match-details" suffix — England Hockey added it to some
+            # icons (e.g. yellow-card-match-details) without changing the others,
+            # so normalise before matching.
+            if icon_type.endswith("-match-details"):
+                icon_type = icon_type[: -len("-match-details")]
+
             # Map to event types
             if icon_type == "field-goal":
                 return "goal", "FG"
